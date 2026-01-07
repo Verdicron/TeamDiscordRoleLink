@@ -1,0 +1,15 @@
+# Discord server ID
+discordGuildId: "123456789012345678"
+
+# You can add more roles here:
+# DiscordRoleName: MinecraftTeamName
+# The character limit for the MinecraftTeamName is 16 characters.
+roles:
+  "Gregory": greg
+  "Padre Pio": pio
+  "Giana Molla": molla
+  "Benedict": benedict
+  "Catherine": catherine
+  "John Paul II": jp2
+  "Peter": peter
+  "Teresa": teresa

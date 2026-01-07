@@ -1,0 +1,7 @@
+name: Community Assigner
+main: xyz.verdicron.communityassigner.CommunityAssigner
+version: 1.0.0
+api-version: 1.21
+author: Verdicron
+softdepend:
+  - DiscordSRV

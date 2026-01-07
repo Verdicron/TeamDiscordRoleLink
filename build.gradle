@@ -1,0 +1,50 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '7.1.0'
+    id 'kr.entree.spigradle' version '2.2.4'
+    id 'java'
+}
+
+sourceCompatibility = 17
+targetCompatibility = 17
+
+ext {
+    mcVersion = project.property("mcVersion")
+}
+
+group project.property("group")
+
+spigot {
+    name = project.property("pluginName")
+    authors = [project.property("author")]
+    apiVersion = project.property("apiVersion")
+    load = STARTUP
+    softDepends = ['DiscordSRV']
+}
+
+archivesBaseName = project.property("pluginName")
+
+repositories {
+    mavenCentral()
+    spigot()
+    maven { url = 'https://jitpack.io' }
+    maven { url = 'https://repo.aikar.co/content/groups/aikar/' }
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    implementation spigot(mcVersion)
+
+    implementation name: 'DiscordSRV-Build-1.30.3'
+}
+
+tasks.build.dependsOn(shadowJar)
+tasks.prepareSpigotPlugins.dependsOn(shadowJar)
+
+processResources {
+    project.properties.put("version", this.version)
+    expand project.properties
+}
+
+defaultTasks 'build'

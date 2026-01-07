@@ -1,0 +1,9 @@
+main: xyz.verdicron.teamdiscordrolelink.TeamDiscordRoleLink
+name: Team Discord Role Link
+version: 1.0.0
+authors:
+ - Verdicron
+api-version: 1.21.10
+load: STARTUP
+softdepend:
+ - DiscordSRV
