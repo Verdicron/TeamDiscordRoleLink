@@ -98,7 +98,7 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (label.equalsIgnoreCase("ca") && args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+        if (label.equalsIgnoreCase("teamdiscordrolelink") && args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             reloadConfig();
             discordGuildId = getConfig().getString("discordGuildId", "YOUR_GUILD_ID_HERE");
             loadRolesFromConfig();
