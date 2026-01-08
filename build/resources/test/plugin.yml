@@ -1,6 +1,6 @@
 main: xyz.verdicron.teamdiscordrolelink.TeamDiscordRoleLink
 name: TeamDiscordRoleLink
-version: 1.0.0
+version: 1.0.1
 authors:
  - Verdicron
 api-version: 1.21.10

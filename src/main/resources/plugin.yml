@@ -1,7 +1,20 @@
 name: TeamDiscordRoleLink
 main: xyz.verdicron.teamdiscordrolelink.TeamDiscordRoleLink
-version: 1.0.0
+version: 1.0.1
 api-version: 1.21
 author: Verdicron
-softdepend:
+
+depend:
   - DiscordSRV
+
+commands:
+  teamdiscordrolelink:
+    description: Reload TeamDiscordRoleLink config
+    usage: /teamdiscordrolelink reload
+    permission: teamdiscordrolelink.reload
+    aliases:
+      - tdrl
+
+permissions:
+  teamdiscordrolelink.reload:
+    default: op

@@ -28,7 +28,6 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
 
         saveDefaultConfig();
 
-        // Load guild ID from config
         discordGuildId = getConfig().getString("discordGuildId", "YOUR_GUILD_ID_HERE");
 
         loadRolesFromConfig();
@@ -43,7 +42,9 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
         if (getConfig().contains("roles")) {
             for (String discordRole : getConfig().getConfigurationSection("roles").getKeys(false)) {
                 String teamName = getConfig().getString("roles." + discordRole);
-                if (teamName != null) roleToTeam.put(discordRole, teamName);
+                if (teamName != null) {
+                    roleToTeam.put(discordRole, teamName);
+                }
             }
         }
     }
@@ -60,11 +61,13 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
     }
 
     private void assignTeams(Player player) {
-        // Get Discord ID (string)
-        String discordId = DiscordSRV.getPlugin().getAccountLinkManager().getDiscordId(player.getUniqueId());
-        if (discordId == null) return;
+        String discordId = DiscordSRV.getPlugin()
+                .getAccountLinkManager()
+                .getDiscordId(player.getUniqueId());
 
+        if (discordId == null) return;
         if (DiscordSRV.getPlugin().getJda() == null) return;
+        if (DiscordSRV.getPlugin().getJda().getGuildById(discordGuildId) == null) return;
 
         Member member = DiscordSRV.getPlugin().getJda()
                 .getGuildById(discordGuildId)
@@ -73,7 +76,9 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
         if (member == null) return;
 
         Scoreboard scoreboard = player.getScoreboard();
-        if (scoreboard == null) scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+        if (scoreboard == null) {
+            scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+        }
 
         for (Role role : member.getRoles()) {
             String teamName = roleToTeam.get(role.getName());
@@ -85,7 +90,7 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
                 team.setDisplayName(teamName);
             }
 
-            // Remove from other teams
+            // Remove player from other teams
             for (Team t : scoreboard.getTeams()) {
                 if (t.hasEntry(player.getName()) && !t.getName().equals(teamName)) {
                     t.removeEntry(player.getName());
@@ -98,7 +103,17 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (label.equalsIgnoreCase("teamdiscordrolelink") && args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+        if (!command.getName().equalsIgnoreCase("teamdiscordrolelink")) {
+            return false;
+        }
+
+        // OP-only
+        if (!sender.isOp()) {
+            sender.sendMessage("§cYou must be OP to use this command.");
+            return true;
+        }
+
+        if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             reloadConfig();
             discordGuildId = getConfig().getString("discordGuildId", "YOUR_GUILD_ID_HERE");
             loadRolesFromConfig();
@@ -106,8 +121,33 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener {
             syncAllOnlinePlayers();
             return true;
         }
-        return false;
+
+        sender.sendMessage("§cUsage: /teamdiscordrolelink reload");
+        return true;
     }
+@Override
+public java.util.List<String> onTabComplete(
+        CommandSender sender,
+        Command command,
+        String alias,
+        String[] args
+) {
+    if (!command.getName().equalsIgnoreCase("teamdiscordrolelink")) {
+        return null;
+    }
+
+    // OP-only suggestions
+    if (!sender.isOp()) {
+        return java.util.Collections.emptyList();
+    }
+
+    // Suggest "reload" as the first argument
+    if (args.length == 1) {
+        return java.util.Collections.singletonList("reload");
+    }
+
+    return java.util.Collections.emptyList();
+}
 
     @Override
     public void onDisable() {
