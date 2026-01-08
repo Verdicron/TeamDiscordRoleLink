@@ -1,0 +1,73 @@
+# =====================
+# Build outputs
+# =====================
+/target/
+/build/
+/out/
+
+# Compiled plugin jars (optional – usually ignored)
+*.jar
+
+# =====================
+# Runtime server files
+# =====================
+/run/
+/server/
+/paper/
+/plugins/*
+!/plugins/YourPluginName.jar
+
+# World data
+/world/
+/world_nether/
+/world_the_end/
+
+# Logs & crash reports
+/logs/
+/crash-reports/
+
+# =====================
+# Gradle
+# =====================
+.gradle/
+/gradle-app.setting
+!gradle-wrapper.jar
+
+# =====================
+# Maven
+# =====================
+/.mvn/wrapper/maven-wrapper.jar
+
+# =====================
+# IDE files
+# =====================
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VS Code
+.vscode/
+
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# Env / secrets
+# =====================
+.env
+*.env
+
+# =====================
+# Misc
+# =====================
+*.log
+*.tmp
+*.bak

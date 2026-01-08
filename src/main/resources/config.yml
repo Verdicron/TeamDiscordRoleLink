@@ -1,15 +1,11 @@
 # Discord server ID
-discordGuildId: "123456789012345678"
+# Get this by right clicking your server and hitting Copy Server ID in discord
+# You will need developer mode enabled in discord settings
+discordGuildId: ""
 
 # You can add more roles here:
 # DiscordRoleName: MinecraftTeamName
 # The character limit for the MinecraftTeamName is 16 characters.
+# Format them like this
+#  "DiscordRoleName": teamname
 roles:
-  "Gregory": greg
-  "Padre Pio": pio
-  "Giana Molla": molla
-  "Benedict": benedict
-  "Catherine": catherine
-  "John Paul II": jp2
-  "Peter": peter
-  "Teresa": teresa

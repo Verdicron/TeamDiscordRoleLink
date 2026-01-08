@@ -1,5 +1,5 @@
-name: Community Assigner
-main: xyz.verdicron.communityassigner.CommunityAssigner
+name: TeamDiscordRoleLink
+main: xyz.verdicron.teamdiscordrolelink.TeamDiscordRoleLink
 version: 1.0.0
 api-version: 1.21
 author: Verdicron
