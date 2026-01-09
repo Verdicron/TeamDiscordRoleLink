@@ -4,8 +4,27 @@
 discordGuildId: ""
 
 # You can add more roles here:
-# DiscordRoleName: MinecraftTeamName
+# The list of colors is as follows:
+# black
+# dark_blue
+# dark_green
+# dark_aqua
+# dark_red
+# dark_purple
+# gold
+# gray
+# dark_gray
+# blue
+# green
+# aqua
+# red
+# light_purple
+# yellow
+# white
+#
 # The character limit for the MinecraftTeamName is 16 characters.
 # Format them like this
-#  "DiscordRoleName": teamname
+#  "DiscordRoleName":
+#  	  team: teamname
+#  	  color: white
 roles:
