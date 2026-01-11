@@ -15,62 +15,80 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.scoreboard.Team.Option;
+import org.bukkit.scoreboard.Team.OptionStatus;
 
 import java.util.*;
 
 public class TeamDiscordRoleLink extends JavaPlugin implements Listener, TabCompleter {
 
-    private final Map<String, TeamData> roleToTeam = new HashMap<>();
+    private final List<RoleRule> roleRules = new ArrayList<>();
     private String discordGuildId;
 
     @Override
     public void onEnable() {
-        getLogger().info("TeamDiscordRoleLink enabled!");
-
         saveDefaultConfig();
-        discordGuildId = getConfig().getString("discordGuildId", "YOUR_GUILD_ID_HERE");
+        discordGuildId = getConfig().getString("discordGuildId", "").trim();
 
         loadRolesFromConfig();
 
         Bukkit.getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("teamdiscordrolelink")).setTabCompleter(this);
 
-        // Sync online players
         Bukkit.getScheduler().runTask(this, this::syncAllOnlinePlayers);
     }
 
-    // ---------------- CONFIG LOADING ----------------
+    // ---------------- CONFIG ----------------
 
     private void loadRolesFromConfig() {
-        roleToTeam.clear();
+        roleRules.clear();
 
         if (!getConfig().isConfigurationSection("roles")) return;
 
-        for (String discordRole : getConfig().getConfigurationSection("roles").getKeys(false)) {
-            String teamName = getConfig().getString("roles." + discordRole + ".team");
-            String colorName = getConfig().getString("roles." + discordRole + ".color");
+        for (String key : getConfig().getConfigurationSection("roles").getKeys(false)) {
+            String base = "roles." + key;
 
-            if (teamName == null) continue;
+            String typeStr = getConfig().getString(base + ".type");
+            String teamName = getConfig().getString(base + ".team");
 
-            ChatColor color = null;
-            if (colorName != null) {
-                try {
-                    color = ChatColor.valueOf(colorName.toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    getLogger().warning("Invalid color '" + colorName + "' for role '" + discordRole + "'");
-                }
+            if (typeStr == null || teamName == null) {
+                getLogger().warning("Role '" + key + "' missing required fields.");
+                continue;
             }
 
-            roleToTeam.put(discordRole, new TeamData(teamName, color));
+            RoleMatchType type;
+            try {
+                type = RoleMatchType.valueOf(typeStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                getLogger().warning("Invalid type for role '" + key + "'");
+                continue;
+            }
+
+            ChatColor color = parseColor(base + ".color");
+
+            RoleRule rule = new RoleRule(
+                    key,
+                    type,
+                    teamName,
+                    color,
+                    parseVisibility(base + ".collisionRule"),
+                    parseVisibility(base + ".nametagVisibility"),
+                    parseVisibility(base + ".deathMessageVisibility"),
+                    getConfig().contains(base + ".friendlyFire") ? getConfig().getBoolean(base + ".friendlyFire") : null,
+                    getConfig().contains(base + ".seeFriendlyInvisibles") ? getConfig().getBoolean(base + ".seeFriendlyInvisibles") : null,
+                    colorize(getConfig().getString(base + ".displayName")),
+                    colorize(getConfig().getString(base + ".prefix")),
+                    colorize(getConfig().getString(base + ".suffix"))
+            );
+
+            roleRules.add(rule);
         }
     }
 
     // ---------------- PLAYER SYNC ----------------
 
     private void syncAllOnlinePlayers() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            assignTeams(player);
-        }
+        Bukkit.getOnlinePlayers().forEach(this::assignTeams);
     }
 
     @EventHandler
@@ -79,69 +97,74 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener, TabComp
     }
 
     private void assignTeams(Player player) {
-    String discordId = DiscordSRV.getPlugin()
-            .getAccountLinkManager()
-            .getDiscordId(player.getUniqueId());
+        String discordId = DiscordSRV.getPlugin().getAccountLinkManager().getDiscordId(player.getUniqueId());
+        if (discordId == null) return;
 
-    if (discordId == null) return;
-    if (DiscordSRV.getPlugin().getJda() == null) return;
+        var jda = DiscordSRV.getPlugin().getJda();
+        if (jda == null || discordGuildId.isEmpty()) return;
 
-    var guild = DiscordSRV.getPlugin().getJda().getGuildById(discordGuildId);
-    if (guild == null) return;
+        var guild = jda.getGuildById(discordGuildId);
+        if (guild == null) return;
 
-    Member member = guild.getMemberById(discordId);
-    if (member == null) return;
+        Member member = guild.getMemberById(discordId);
+        if (member == null) return;
 
-    Scoreboard scoreboard = player.getScoreboard();
-    if (scoreboard == null) {
-        scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-    }
+        Scoreboard scoreboard = Optional.ofNullable(player.getScoreboard())
+                .orElse(Bukkit.getScoreboardManager().getMainScoreboard());
 
-    for (Role role : member.getRoles()) {
-        TeamData data = roleToTeam.get(role.getName());
-        if (data == null) continue;
+        for (Role role : member.getRoles()) {
+            for (RoleRule rule : roleRules) {
+                if (!rule.matches(role)) continue;
 
-        Team team = scoreboard.getTeam(data.teamName);
+                Team team = scoreboard.getTeam(rule.teamName);
+                if (team == null) {
+                    team = scoreboard.registerNewTeam(rule.teamName);
+                }
 
-        // Create team if missing
-        if (team == null) {
-            team = scoreboard.registerNewTeam(data.teamName);
-            team.setDisplayName(data.teamName);
-        }
+                applyTeamSettings(team, rule);
 
-        // ✅ ALWAYS enforce color from config (even if team already existed)
-        if (data.color != null) {
-            team.setColor(data.color);
-        }
+                for (Team t : scoreboard.getTeams()) {
+                    if (t.hasEntry(player.getName()) && !t.equals(team)) {
+                        t.removeEntry(player.getName());
+                    }
+                }
 
-        // Remove from all other teams
-        for (Team t : scoreboard.getTeams()) {
-            if (t.hasEntry(player.getName()) && !t.getName().equals(team.getName())) {
-                t.removeEntry(player.getName());
+                team.addEntry(player.getName());
             }
         }
-
-        team.addEntry(player.getName());
     }
-}
+
+    private void applyTeamSettings(Team team, RoleRule rule) {
+        if (rule.color != null) team.setColor(rule.color);
+        if (rule.displayName != null) team.setDisplayName(rule.displayName);
+        if (rule.prefix != null) team.setPrefix(rule.prefix);
+        if (rule.suffix != null) team.setSuffix(rule.suffix);
+
+        if (rule.friendlyFire != null) team.setAllowFriendlyFire(rule.friendlyFire);
+        if (rule.seeFriendlyInvisibles != null) team.setCanSeeFriendlyInvisibles(rule.seeFriendlyInvisibles);
+
+        if (rule.collisionRule != null)
+            team.setOption(Option.COLLISION_RULE, rule.collisionRule);
+
+        if (rule.nametagVisibility != null)
+            team.setOption(Option.NAME_TAG_VISIBILITY, rule.nametagVisibility);
+
+        if (rule.deathMessageVisibility != null)
+            team.setOption(Option.DEATH_MESSAGE_VISIBILITY, rule.deathMessageVisibility);
+    }
 
     // ---------------- COMMAND ----------------
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!command.getName().equalsIgnoreCase("teamdiscordrolelink")) return false;
-
-        if (!sender.isOp()) {
-            sender.sendMessage("§cYou must be OP to use this command.");
-            return true;
-        }
+        if (!sender.isOp()) return true;
 
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             reloadConfig();
-            discordGuildId = getConfig().getString("discordGuildId", "YOUR_GUILD_ID_HERE");
+            discordGuildId = getConfig().getString("discordGuildId", "").trim();
             loadRolesFromConfig();
             syncAllOnlinePlayers();
-            sender.sendMessage("§aTeamDiscordRoleLink config reloaded!");
+            sender.sendMessage("§aConfig reloaded.");
             return true;
         }
 
@@ -149,39 +172,75 @@ public class TeamDiscordRoleLink extends JavaPlugin implements Listener, TabComp
         return true;
     }
 
-    // ---------------- TAB COMPLETE ----------------
-
     @Override
-    public List<String> onTabComplete(
-            CommandSender sender,
-            Command command,
-            String alias,
-            String[] args
-    ) {
-        if (!command.getName().equalsIgnoreCase("teamdiscordrolelink")) return null;
-        if (!sender.isOp()) return Collections.emptyList();
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return sender.isOp() && args.length == 1 ? List.of("reload") : Collections.emptyList();
+    }
 
-        if (args.length == 1) {
-            return Collections.singletonList("reload");
+    // ---------------- HELPERS ----------------
+
+    private ChatColor parseColor(String path) {
+        if (!getConfig().contains(path)) return null;
+        try {
+            return ChatColor.valueOf(getConfig().getString(path).toUpperCase());
+        } catch (IllegalArgumentException e) {
+            getLogger().warning("Invalid color at " + path);
+            return null;
         }
-
-        return Collections.emptyList();
     }
 
-    @Override
-    public void onDisable() {
-        getLogger().info("TeamDiscordRoleLink disabled!");
+    private OptionStatus parseVisibility(String path) {
+        if (!getConfig().contains(path)) return null;
+
+        return switch (getConfig().getString(path).toLowerCase()) {
+            case "always" -> OptionStatus.ALWAYS;
+            case "never" -> OptionStatus.NEVER;
+            case "pushotherteams", "hideforotherteams" -> OptionStatus.FOR_OTHER_TEAMS;
+            case "pushownteam", "hideforownteam" -> OptionStatus.FOR_OWN_TEAM;
+            default -> null;
+        };
     }
 
-    // ---------------- DATA CLASS ----------------
+    private String colorize(String s) {
+        return s == null ? null : ChatColor.translateAlternateColorCodes('&', s);
+    }
 
-    private static class TeamData {
-        String teamName;
-        ChatColor color;
+    // ---------------- DATA ----------------
 
-        TeamData(String teamName, ChatColor color) {
+    private enum RoleMatchType { NAME, ID }
+
+    private static class RoleRule {
+        final String value;
+        final RoleMatchType type;
+        final String teamName;
+        final ChatColor color;
+        final OptionStatus collisionRule, nametagVisibility, deathMessageVisibility;
+        final Boolean friendlyFire, seeFriendlyInvisibles;
+        final String displayName, prefix, suffix;
+
+        RoleRule(String value, RoleMatchType type, String teamName, ChatColor color,
+                 OptionStatus collisionRule, OptionStatus nametagVisibility, OptionStatus deathMessageVisibility,
+                 Boolean friendlyFire, Boolean seeFriendlyInvisibles,
+                 String displayName, String prefix, String suffix) {
+
+            this.value = value;
+            this.type = type;
             this.teamName = teamName;
             this.color = color;
+            this.collisionRule = collisionRule;
+            this.nametagVisibility = nametagVisibility;
+            this.deathMessageVisibility = deathMessageVisibility;
+            this.friendlyFire = friendlyFire;
+            this.seeFriendlyInvisibles = seeFriendlyInvisibles;
+            this.displayName = displayName;
+            this.prefix = prefix;
+            this.suffix = suffix;
+        }
+
+        boolean matches(Role role) {
+            return type == RoleMatchType.ID
+                    ? role.getId().equals(value)
+                    : role.getName().equalsIgnoreCase(value);
         }
     }
 }

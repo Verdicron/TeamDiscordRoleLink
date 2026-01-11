@@ -1,30 +1,85 @@
+# ===============================
 # Discord server ID
-# Get this by right clicking your server and hitting Copy Server ID in discord
-# You will need developer mode enabled in discord settings
+# ===============================
+# Get this by right clicking your server and hitting "Copy Server ID" in Discord
+# You must enable Developer Mode in Discord settings
 discordGuildId: ""
 
-# You can add more roles here:
-# The list of colors is as follows:
-# black
-# dark_blue
-# dark_green
-# dark_aqua
-# dark_red
-# dark_purple
-# gold
-# gray
-# dark_gray
-# blue
-# green
-# aqua
-# red
-# light_purple
-# yellow
-# white
+# ===============================
+# Role → Team mappings
+# ===============================
+# Each entry key MUST be in quotes
+# It can be either:
+#   - a Discord role NAME
+#   - a Discord role ID
 #
-# The character limit for the MinecraftTeamName is 16 characters.
-# Format them like this
-#  "DiscordRoleName":
-#  	  team: teamname
-#  	  color: white
+# You MUST specify the type and team fields:
+#   type: name   -> match by role name
+#   type: id     -> match by role ID
+#
+#   team: "teamname" -> replace with any name
+# NOTE:
+# - Minecraft team names have a HARD 16 character limit
+# - All fields except `team` and `type` are OPTIONAL
+# - Changes apply even if the team already exists
+#
+# -------------------------------
+# Available colors:
+# black, dark_blue, dark_green, dark_aqua, dark_red, dark_purple,
+# gold, gray, dark_gray, blue, green, aqua, red,
+# light_purple, yellow, white
+#
+# -------------------------------
+# collisionRule values:
+# always
+# never
+# pushOtherTeams
+# pushOwnTeam
+#
+# -------------------------------
+# deathMessageVisibility values:
+# always
+# never
+# hideForOtherTeams
+# hideForOwnTeam
+#
+# -------------------------------
+# nametagVisibility values:
+# always
+# never
+# hideForOtherTeams
+# hideForOwnTeam
+#
+# -------------------------------
+# friendlyFire: true / false
+# seeFriendlyInvisibles: true / false
+#
+# displayName, prefix, suffix:
+# - Strings
+# - Supports & color codes
+# ===============================
+# Examples:
+#  "RoleName":
+#    type: name
+#    team: teamname
+#    color: white
+#    displayName: "Team1"
+#    prefix: "[1]"
+#    friendlyFire: false
+#    seeFriendlyInvisibles: true
+#    collisionRule: pushOwnTeam
+#    nametagVisibility: always
+#    deathMessageVisibility: hideForOtherTeams
+#
+#  "12345678987654321":
+#    type: id
+#    team: staff
+#    color: gold
+#    displayName: "&6Staff"
+#    prefix: "&6[Staff] "
+#    suffix: " &7★"
+#    friendlyFire: false
+#    collisionRule: never
+#    nametagVisibility: always
+#    deathMessageVisibility: always
 roles:
